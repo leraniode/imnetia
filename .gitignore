@@ -1,0 +1,31 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go build artifacts
+/bin/
+/dist/
+
+# Go module cache
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Imnetia model artifacts (not committed — generated at build time)
+*.ilm
+
+# Local dev notes
+COMMIT.md
