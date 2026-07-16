@@ -3,7 +3,7 @@
 // Developers never import or interact with it directly.
 package runtime
 
-import "github.com/leraniode/xgo/centrix/core"
+import "github.com/leraniode/x/centrix/core"
 
 // nodeChannel is a buffered Go channel that carries a Signal between
 // two node goroutines in the execution pipeline.

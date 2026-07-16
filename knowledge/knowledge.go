@@ -25,7 +25,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/leraniode/xgo/centrix/core"
+	"github.com/leraniode/x/centrix/core"
 )
 
 // ─── Errors ───────────────────────────────────────────────────────────────────

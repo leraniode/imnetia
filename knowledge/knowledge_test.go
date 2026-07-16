@@ -3,7 +3,7 @@ package knowledge
 import (
 	"testing"
 
-	"github.com/leraniode/xgo/centrix/core"
+	"github.com/leraniode/x/centrix/core"
 )
 
 func makeEntry(id string, weight float64, features map[uint32]float64) Entry {

@@ -7,7 +7,7 @@ import (
 	"github.com/leraniode/imnetia/graph"
 	"github.com/leraniode/imnetia/knowledge"
 	"github.com/leraniode/imnetia/types"
-	"github.com/leraniode/xgo/centrix/core"
+	"github.com/leraniode/x/centrix/core"
 )
 
 const maxVisits = 50

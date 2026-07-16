@@ -2,7 +2,7 @@ package runtime
 
 import (
 	"github.com/leraniode/imnetia/types"
-	"github.com/leraniode/xgo/centrix/core"
+	"github.com/leraniode/x/centrix/core"
 )
 
 // contextEngine constructs the initial Signal from a Context.
