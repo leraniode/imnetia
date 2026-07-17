@@ -76,7 +76,7 @@ func TestEngineRunSingleNode(t *testing.T) {
 	if sig.Confidence <= 0 {
 		t.Fatalf("expected positive confidence, got %v", sig.Confidence)
 	}
-	if len(sig.Trace) == 0 {
+	if len(sig.Trace.Steps()) == 0 {
 		t.Fatalf("expected non-empty trace")
 	}
 }
@@ -108,8 +108,8 @@ func TestEngineRunChain(t *testing.T) {
 		t.Fatalf("Run chain: %v", err)
 	}
 	// Two nodes ran — trace should have at least 2 steps
-	if len(sig.Trace) < 2 {
-		t.Fatalf("expected at least 2 trace steps, got %d", len(sig.Trace))
+	if len(sig.Trace.Steps()) < 2 {
+		t.Fatalf("expected at least 2 trace steps, got %d", len(sig.Trace.Steps()))
 	}
 }
 

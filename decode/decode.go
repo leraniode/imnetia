@@ -154,10 +154,10 @@ func Summarise(r Result) string {
 	}
 	if r.Match == "" {
 		return fmt.Sprintf("[decode] confidence=%.2f (%s) no match in domain %q trace=%d steps",
-			r.Confidence, certain, r.Domain, len(r.Trace))
+			r.Confidence, certain, r.Domain, len(r.Trace.Steps()))
 	}
 	return fmt.Sprintf("[decode] confidence=%.2f (%s) match=%q score=%.3f domain=%q trace=%d steps",
-		r.Confidence, certain, r.Match, r.Score, r.Domain, len(r.Trace))
+		r.Confidence, certain, r.Match, r.Score, r.Domain, len(r.Trace.Steps()))
 }
 
 // ─── Decode ───────────────────────────────────────────────────────────────────

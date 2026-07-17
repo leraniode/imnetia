@@ -42,7 +42,7 @@ const (
 // ─── Errors ───────────────────────────────────────────────────────────────────
 
 var (
-	ErrEmptyTrace    = errors.New("imnetia/learning: signal has empty trace — nothing to learn from")
+	ErrEmptyTrace     = errors.New("imnetia/learning: signal has empty trace — nothing to learn from")
 	ErrInvalidOutcome = errors.New("imnetia/learning: outcome must be in [0.0, 1.0]")
 )
 
@@ -52,10 +52,10 @@ var (
 // It holds the learning rates and references to the Flow and KnowledgeStore
 // that should be updated.
 type Updater struct {
-	flow   *graph.Flow
-	store  *knowledge.KnowledgeStore
-	alpha  float64 // delta rule learning rate for edge weights
-	eta    float64 // learning rate for Trust updates
+	flow  *graph.Flow
+	store *knowledge.KnowledgeStore
+	alpha float64 // delta rule learning rate for edge weights
+	eta   float64 // learning rate for Trust updates
 }
 
 // New creates an Updater with default learning rates.
@@ -99,11 +99,11 @@ func (u *Updater) Update(signal core.Signal, outcome float64) error {
 	if outcome < 0 || outcome > 1 {
 		return fmt.Errorf("%w: got %v", ErrInvalidOutcome, outcome)
 	}
-	if len(signal.Trace) == 0 {
+	if len(signal.Trace.Steps()) == 0 {
 		return ErrEmptyTrace
 	}
 
-	trace := signal.Trace
+	trace := signal.Trace.Steps()
 
 	// Walk consecutive step pairs to identify which edges were traversed.
 	for i := 0; i < len(trace)-1; i++ {
@@ -167,10 +167,10 @@ func (u *Updater) Update(signal core.Signal, outcome float64) error {
 // Foundation Prototype weights are not included — they are immutable
 // and always loaded from .pack files at startup.
 type Snapshot struct {
-	Version   int               `json:"version"`
-	Timestamp time.Time         `json:"timestamp"`
-	Edges     []edgeState       `json:"edges"`
-	Prototypes []protoState     `json:"prototypes"`
+	Version    int          `json:"version"`
+	Timestamp  time.Time    `json:"timestamp"`
+	Edges      []edgeState  `json:"edges"`
+	Prototypes []protoState `json:"prototypes"`
 }
 
 type edgeState struct {
