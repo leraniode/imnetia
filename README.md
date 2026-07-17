@@ -1,20 +1,28 @@
+<p align="left">
+    <a href="https://github.com/leraniode/imnetia">
+        <img src="https://raw.githubusercontent.com/leraniode/.github/main/assets/images/imnetia.svg" />
+    </a>
+</p>
+
 # Imnetia
 
 > Deterministic intelligence framework for Go.
 
-Built on [Centrix](https://github.com/leraniode/xgo/centrix) — sparse signal mathematics.
+[![part of leraniode](https://raw.githubusercontent.com/leraniode/.github/main/assets/badges/partofleraniode.svg)](https://github.com/leraniode)
+
+Built on [Centrix](https://pkg.go.devgithub.com/leraniode/x/centrix) — sparse signal mathematics.
 
 **Status: Experimental.** APIs and behaviours are subject to change until v1.0.
 
 ---
 
-## What it is
+## Purpose
 
 Imnetia gives you the primitives to build systems that can reason, decide, and learn — deterministically, on CPU, with every conclusion fully traceable.
 
 It is not a statistical model. It is not a wrapper around an AI provider. It is a framework for building intelligence systems from authored knowledge and sparse vector mathematics.
 
-## Organisation
+## Structure
 
 ```
 imnetia/
@@ -26,6 +34,16 @@ imnetia/
   model/      — model artifact packaging
 ```
 
-## Part of Leraniode
+## License
 
-[leraniode](https://github.com/leraniode)
+MIT — Leraniode
+
+---
+
+Part of [Leraniode](https://github.com/leraniode).
+
+<p align="left">
+    <a href="https://github.com/leraniode">
+        <img src="https://raw.githubusercontent.com/leraniode/.github/main/assets/footer.png" width="600" />
+    </a>
+</p>
