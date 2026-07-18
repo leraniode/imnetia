@@ -211,3 +211,96 @@ func Run(
 	}
 	return output, result, nil
 }
+
+// ─── Response Assembly ────────────────────────────────────────────────────────
+
+// AssembledResponse is the output of Assemble — matched Surface texts
+// ordered by relevance score, ready to be joined into a response.
+type AssembledResponse struct {
+	// Fragments are Surface texts from matched Prototypes, best match first.
+	// Join them with a separator to produce the final response.
+	Fragments []string
+
+	// Scores are the combined similarity scores for each Fragment.
+	// Parallel to Fragments — Scores[i] is the score for Fragments[i].
+	Scores []float64
+
+	// Result is the core decode Result — Match, Confidence, Certain, Trace.
+	Result Result
+}
+
+// Assemble finds all Prototypes in domain that match the Signal above
+// scoreThreshold (Cosine × Weight), collects their Surface texts, and
+// returns them ordered by relevance score.
+//
+// This is how a Signal becomes a human-readable response:
+//  1. Classify finds the best-matching Prototype (the main answer)
+//  2. Assemble collects all Surface texts above threshold (fuller context)
+//  3. The caller joins Fragments into the final response string
+//
+// Prototypes with empty Surface are skipped — they contribute to reasoning
+// but have nothing to say in the response.
+//
+// scoreThreshold is a combined score (Cosine × Weight), not just Cosine.
+// Use a value between 0.1 and 0.5. Lower = more fragments, less precise.
+func Assemble(
+	signal core.Signal,
+	store *knowledge.KnowledgeStore,
+	domain string,
+	confidenceThreshold float64,
+	scoreThreshold float64,
+) (AssembledResponse, error) {
+	// Run core classification first.
+	result, err := Classify(signal, store, domain, confidenceThreshold)
+	if err != nil {
+		return AssembledResponse{}, err
+	}
+
+	entries, err := store.Domain(domain)
+	if err != nil {
+		return AssembledResponse{Result: result}, nil
+	}
+
+	type fragment struct {
+		text  string
+		score float64
+	}
+	var fragments []fragment
+
+	for _, e := range entries {
+		if e.Surface == "" {
+			continue // no text to surface
+		}
+		sim := core.Cosine(signal.Vector, e.Prototype.Vector)
+		if sim <= 0 {
+			continue
+		}
+		score := sim * e.Prototype.Weight
+		if score < scoreThreshold {
+			continue
+		}
+		fragments = append(fragments, fragment{text: e.Surface, score: score})
+	}
+
+	// Sort by score descending — best match first.
+	for i := 0; i < len(fragments); i++ {
+		for j := i + 1; j < len(fragments); j++ {
+			if fragments[j].score > fragments[i].score {
+				fragments[i], fragments[j] = fragments[j], fragments[i]
+			}
+		}
+	}
+
+	texts := make([]string, len(fragments))
+	scores := make([]float64, len(fragments))
+	for i, f := range fragments {
+		texts[i] = f.text
+		scores[i] = f.score
+	}
+
+	return AssembledResponse{
+		Fragments: texts,
+		Scores:    scores,
+		Result:    result,
+	}, nil
+}

@@ -184,3 +184,111 @@ func TestRunNoDomain(t *testing.T) {
 	}
 	_ = output
 }
+
+// ─── Assemble tests ───────────────────────────────────────────────────────────
+
+func makeStoreWithSurface() *knowledge.KnowledgeStore {
+	ks := knowledge.New()
+	ks.Load("python", knowledge.Foundation, []knowledge.Entry{
+		{
+			ID:        "python.string.reverse",
+			Prototype: core.NewPrototype(core.SparseVector{1: 0.9, 2: 0.85, 3: 0.9}, 0.9),
+			Surface:   "reverse a string in Python using slice notation: [::-1]",
+		},
+		{
+			ID:        "python.string.reverse.example",
+			Prototype: core.NewPrototype(core.SparseVector{1: 0.8, 2: 0.7, 3: 0.85, 4: 0.8}, 0.8),
+			Surface:   "example: s = 'hello'; reversed_s = s[::-1]  # 'olleh'",
+		},
+		{
+			ID:        "python.string.upper",
+			Prototype: core.NewPrototype(core.SparseVector{1: 0.9, 5: 0.9}, 0.85),
+			Surface:   "convert string to uppercase: s.upper()",
+		},
+		{
+			ID:        "python.reasoning.only",
+			Prototype: core.NewPrototype(core.SparseVector{1: 0.9, 6: 0.9}, 0.7),
+			Surface:   "", // no surface — reasoning only
+		},
+	})
+	return ks
+}
+
+func TestAssembleFindsFragments(t *testing.T) {
+	ks := makeStoreWithSurface()
+	// Signal close to string reverse
+	sig := core.NewSignalFromVector(core.SparseVector{1: 0.9, 2: 0.8, 3: 0.9}, 0.85)
+
+	resp, err := Assemble(sig, ks, "python", DefaultThreshold, 0.1)
+	if err != nil {
+		t.Fatalf("Assemble: %v", err)
+	}
+	if len(resp.Fragments) == 0 {
+		t.Fatal("expected fragments in assembled response")
+	}
+	// Best match should be the reverse entry
+	if resp.Fragments[0] == "" {
+		t.Fatal("expected non-empty first fragment")
+	}
+}
+
+func TestAssembleEmptySurfaceSkipped(t *testing.T) {
+	ks := makeStoreWithSurface()
+	sig := core.NewSignalFromVector(core.SparseVector{1: 0.9, 6: 0.9}, 0.85)
+
+	resp, err := Assemble(sig, ks, "python", DefaultThreshold, 0.1)
+	if err != nil {
+		t.Fatalf("Assemble: %v", err)
+	}
+	// "python.reasoning.only" has empty Surface — should never appear
+	for _, f := range resp.Fragments {
+		if f == "" {
+			t.Fatal("empty surface should be skipped in fragments")
+		}
+	}
+}
+
+func TestAssembleOrderedByScore(t *testing.T) {
+	ks := makeStoreWithSurface()
+	sig := core.NewSignalFromVector(core.SparseVector{1: 0.9, 2: 0.85, 3: 0.9}, 0.85)
+
+	resp, err := Assemble(sig, ks, "python", DefaultThreshold, 0.1)
+	if err != nil {
+		t.Fatalf("Assemble: %v", err)
+	}
+	// Scores should be descending
+	for i := 1; i < len(resp.Scores); i++ {
+		if resp.Scores[i] > resp.Scores[i-1] {
+			t.Fatalf("fragments not sorted by score: [%d]=%v > [%d]=%v",
+				i, resp.Scores[i], i-1, resp.Scores[i-1])
+		}
+	}
+}
+
+func TestAssembleHighThresholdFilters(t *testing.T) {
+	ks := makeStoreWithSurface()
+	sig := core.NewSignalFromVector(core.SparseVector{1: 0.9, 2: 0.85, 3: 0.9}, 0.85)
+
+	// Very high score threshold — should filter most fragments
+	resp, err := Assemble(sig, ks, "python", DefaultThreshold, 0.99)
+	if err != nil {
+		t.Fatalf("Assemble: %v", err)
+	}
+	if len(resp.Fragments) > 1 {
+		t.Fatalf("expected 0-1 fragments at high threshold, got %d", len(resp.Fragments))
+	}
+}
+
+func TestAssembleCarriesResult(t *testing.T) {
+	ks := makeStoreWithSurface()
+	sig := core.NewSignalFromVector(core.SparseVector{1: 0.9, 2: 0.85, 3: 0.9}, 0.85)
+
+	resp, err := Assemble(sig, ks, "python", DefaultThreshold, 0.1)
+	if err != nil {
+		t.Fatalf("Assemble: %v", err)
+	}
+	// Result should be populated
+	if resp.Result.Confidence == 0 {
+		t.Fatal("expected non-zero confidence in Result")
+	}
+}
