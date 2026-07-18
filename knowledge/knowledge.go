@@ -60,9 +60,18 @@ const (
 
 // Entry is a named Prototype in the store.
 // ID is stable within a domain — it identifies the knowledge unit across runs.
+//
+// Surface is the raw text fragment associated with this knowledge unit.
+// It is used by the decode layer to assemble human-readable responses.
+// The Vector is for reasoning (Cosine matching) — Surface is for output.
+// Surface may be empty for knowledge units used purely for reasoning.
+//
+// One Prototype may have multiple Entries with different Surface texts —
+// different ways of expressing the same concept in different contexts.
 type Entry struct {
 	ID        string
 	Prototype core.Prototype
+	Surface   string
 }
 
 // ─── domain ───────────────────────────────────────────────────────────────────

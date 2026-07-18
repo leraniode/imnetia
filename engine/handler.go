@@ -20,6 +20,6 @@ type NodeResult = types.NodeResult
 // See types.Context for the full definition.
 type Context = types.Context
 
-// NewContext creates a Context backed by the given KnowledgeStore.
+// NewContext creates a Context backed by the given KnowledgeStore and Registry.
 // This is a convenience re-export of types.NewContext.
 var NewContext = types.NewContext

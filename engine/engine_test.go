@@ -65,8 +65,8 @@ func TestEngineRunSingleNode(t *testing.T) {
 	f.Add(n)
 	f.Entry("classify")
 
-	e := engine.New(ks)
-	ctx := types.NewContext(ks)
+	e := engine.New(ks, nil)
+	ctx := types.NewContext(ks, nil)
 	ctx.Set("input", core.SparseVector{1: 0.9, 2: 0.7}) // close to intent.greet
 
 	sig, err := e.Run(f, ctx)
@@ -99,8 +99,8 @@ func TestEngineRunChain(t *testing.T) {
 	f.Link("a", "b", 1.0, 1.0)
 	f.Entry("a")
 
-	e := engine.New(ks)
-	ctx := types.NewContext(ks)
+	e := engine.New(ks, nil)
+	ctx := types.NewContext(ks, nil)
 	ctx.Set("input", core.SparseVector{1: 1.0})
 
 	sig, err := e.Run(f, ctx)
@@ -116,8 +116,8 @@ func TestEngineRunChain(t *testing.T) {
 func TestEngineRunEmptyFlow(t *testing.T) {
 	ks := makeStore()
 	f := graph.NewFlow()
-	e := engine.New(ks)
-	ctx := types.NewContext(ks)
+	e := engine.New(ks, nil)
+	ctx := types.NewContext(ks, nil)
 
 	_, err := e.Run(f, ctx)
 	if err == nil {
@@ -126,9 +126,9 @@ func TestEngineRunEmptyFlow(t *testing.T) {
 }
 
 func TestEngineRunNoStore(t *testing.T) {
-	e := engine.New(nil)
+	e := engine.New(nil, nil)
 	f := graph.NewFlow()
-	ctx := types.NewContext(nil)
+	ctx := types.NewContext(nil, nil)
 
 	_, err := e.Run(f, ctx)
 	if err == nil {
@@ -147,8 +147,8 @@ func TestEngineRunCycleDetection(t *testing.T) {
 	f.Add(a)
 	f.Entry("a")
 
-	e := engine.New(ks)
-	ctx := types.NewContext(ks)
+	e := engine.New(ks, nil)
+	ctx := types.NewContext(ks, nil)
 	ctx.Set("input", core.SparseVector{1: 1.0})
 
 	_, err := e.Run(f, ctx)
@@ -159,7 +159,7 @@ func TestEngineRunCycleDetection(t *testing.T) {
 
 func TestContextKnowledge(t *testing.T) {
 	ks := makeStore()
-	ctx := types.NewContext(ks)
+	ctx := types.NewContext(ks, nil)
 
 	entries, err := ctx.Knowledge("intent")
 	if err != nil {
@@ -172,7 +172,7 @@ func TestContextKnowledge(t *testing.T) {
 
 func TestContextTypedAccessors(t *testing.T) {
 	ks := makeStore()
-	ctx := types.NewContext(ks)
+	ctx := types.NewContext(ks, nil)
 
 	ctx.Set("name", "imnetia")
 	ctx.Set("count", 42)

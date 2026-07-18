@@ -18,6 +18,7 @@ import (
 
 	"github.com/leraniode/imnetia/knowledge"
 	"github.com/leraniode/x/centrix/core"
+	"github.com/leraniode/x/centrix/registry"
 )
 
 // ─── NodeResult ───────────────────────────────────────────────────────────────
@@ -50,7 +51,8 @@ type NodeHandler func(ctx Context, in core.Signal) (core.Signal, NodeResult)
 //
 // It carries developer-supplied data that is not part of the feature
 // space — session IDs, raw input strings, configuration flags, metadata.
-// It also provides scoped access to the KnowledgeStore via Knowledge().
+// It also provides scoped access to the KnowledgeStore via Knowledge()
+// and the Registry via FeatureName() for debugging and trace readability.
 //
 // Signal carries the mathematical reasoning state (Vector, Confidence,
 // Trace). Context carries everything else.
@@ -60,13 +62,16 @@ type NodeHandler func(ctx Context, in core.Signal) (core.Signal, NodeResult)
 type Context struct {
 	values map[string]any
 	store  *knowledge.KnowledgeStore
+	reg    *registry.Registry
 }
 
-// NewContext creates a Context backed by the given KnowledgeStore.
-func NewContext(store *knowledge.KnowledgeStore) Context {
+// NewContext creates a Context backed by the given KnowledgeStore and Registry.
+// Pass nil for reg if Registry lookups are not needed in NodeHandlers.
+func NewContext(store *knowledge.KnowledgeStore, reg *registry.Registry) Context {
 	return Context{
 		values: make(map[string]any),
 		store:  store,
+		reg:    reg,
 	}
 }
 
@@ -158,4 +163,26 @@ func (c Context) Knowledge(domain string) ([]knowledge.Entry, error) {
 // Used internally by the runtime. Prefer Knowledge() in NodeHandlers.
 func (c Context) Store() *knowledge.KnowledgeStore {
 	return c.store
+}
+
+// FeatureName returns the human-readable name for a FeatureIndex.
+// Uses the Registry to reverse-lookup concept names.
+// Returns "?" if the index is not registered or no Registry is set.
+// Use this in NodeHandlers for debugging and trace readability.
+func (c Context) FeatureName(idx core.FeatureIndex) string {
+	if c.reg == nil {
+		return "?"
+	}
+	name, ok := c.reg.Name(idx)
+	if !ok {
+		return "?"
+	}
+	return name
+}
+
+// Reg returns the underlying Registry.
+// Used for direct Registry access when FeatureName is not sufficient.
+// Returns nil if no Registry was provided.
+func (c Context) Reg() *registry.Registry {
+	return c.reg
 }

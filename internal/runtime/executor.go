@@ -8,6 +8,7 @@ import (
 	"github.com/leraniode/imnetia/knowledge"
 	"github.com/leraniode/imnetia/types"
 	"github.com/leraniode/x/centrix/core"
+	"github.com/leraniode/x/centrix/registry"
 )
 
 const maxVisits = 50
@@ -28,11 +29,12 @@ type Executor struct {
 	ce *contextEngine
 }
 
-// NewExecutor creates an Executor backed by the given KnowledgeStore.
-func NewExecutor(store *knowledge.KnowledgeStore) *Executor {
+// NewExecutor creates an Executor backed by the given KnowledgeStore and Registry.
+// The Registry is used by the ContextEngine to encode raw text queries.
+func NewExecutor(store *knowledge.KnowledgeStore, reg *registry.Registry) *Executor {
 	return &Executor{
 		ke: newKnowledgeEngine(store),
-		ce: newContextEngine(),
+		ce: newContextEngine(reg),
 	}
 }
 
