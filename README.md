@@ -8,8 +8,6 @@
 
 > Deterministic intelligence framework for Go.
 
-[![part of leraniode](https://raw.githubusercontent.com/leraniode/.github/main/assets/badges/partofleraniode.svg)](https://github.com/leraniode)
-
 Built on [Centrix](https://pkg.go.devgithub.com/leraniode/x/centrix) — sparse signal mathematics.
 
 **Status: Experimental.** APIs and behaviours are subject to change until v1.0.
