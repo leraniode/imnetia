@@ -42,6 +42,6 @@ Part of [Leraniode](https://github.com/leraniode).
 
 <p align="left">
     <a href="https://github.com/leraniode">
-        <img src="https://raw.githubusercontent.com/leraniode/.github/main/assets/footer.png" width="600" />
+        <img src="https://raw.githubusercontent.com/leraniode/.github/main/assets/footer.svg" width="600" />
     </a>
 </p>
