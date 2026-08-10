@@ -1,6 +1,6 @@
 <p align="left">
     <a href="https://github.com/leraniode/imnetia">
-        <img src="https://raw.githubusercontent.com/leraniode/.github/main/assets/images/imnetia.svg" />
+        <img src="https://raw.githubusercontent.com/leraniode/.github/main/images/imnetia.svg" />
     </a>
 </p>
 
