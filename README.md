@@ -40,8 +40,9 @@ MIT — Leraniode
 
 Part of [Leraniode](https://github.com/leraniode).
 
-<p align="left">
+<p align="center">
+    <br/>
     <a href="https://github.com/leraniode">
-        <img src="https://raw.githubusercontent.com/leraniode/.github/main/assets/footer.svg" width="600" />
+        <img src="https://raw.githubusercontent.com/leraniode/.github/main/assets/footer.svg" width="1024" />
     </a>
 </p>
