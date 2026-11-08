@@ -352,8 +352,14 @@ func (ks *KnowledgeStore) Snapshot(domainName string) ([]Entry, DomainKind, erro
 func domainSnapshot(d *domain) []Entry {
 	out := make([]Entry, len(d.entries))
 	copy(out, d.entries)
-	sort.Slice(out, func(i, j int) bool {
-		return out[i].Prototype.Weight > out[j].Prototype.Weight
+	// Weight descending; equal weights fall back to ID so the order never
+	// depends on the sort algorithm. Learning moves weights between runs, and
+	// without a tie-break two tied entries could swap places for no reason.
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].Prototype.Weight != out[j].Prototype.Weight {
+			return out[i].Prototype.Weight > out[j].Prototype.Weight
+		}
+		return out[i].ID < out[j].ID
 	})
 	return out
 }

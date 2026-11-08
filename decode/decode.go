@@ -20,6 +20,7 @@ package decode
 import (
 	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/leraniode/imnetia/knowledge"
 	"github.com/leraniode/x/centrix/core"
@@ -262,6 +263,7 @@ func Assemble(
 	}
 
 	type fragment struct {
+		id    string
 		text  string
 		score float64
 	}
@@ -279,17 +281,17 @@ func Assemble(
 		if score < scoreThreshold {
 			continue
 		}
-		fragments = append(fragments, fragment{text: e.Surface, score: score})
+		fragments = append(fragments, fragment{id: e.ID, text: e.Surface, score: score})
 	}
 
-	// Sort by score descending — best match first.
-	for i := 0; i < len(fragments); i++ {
-		for j := i + 1; j < len(fragments); j++ {
-			if fragments[j].score > fragments[i].score {
-				fragments[i], fragments[j] = fragments[j], fragments[i]
-			}
+	// Sort by score descending — best match first. Equal scores fall back to
+	// Entry ID so the fragment order is the same on every run.
+	sort.SliceStable(fragments, func(i, j int) bool {
+		if fragments[i].score != fragments[j].score {
+			return fragments[i].score > fragments[j].score
 		}
-	}
+		return fragments[i].id < fragments[j].id
+	})
 
 	texts := make([]string, len(fragments))
 	scores := make([]float64, len(fragments))
