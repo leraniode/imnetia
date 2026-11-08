@@ -6,7 +6,11 @@
 // The approach: Registry-based tokenisation.
 //   - The Registry is the vocabulary — every concept the system understands
 //     has a Registry entry mapped to a stable FeatureIndex.
-//   - Words not in the Registry are unknown — they contribute nothing.
+//   - Concepts keep namespaced names ("lang.python"); the words people type
+//     ("python", "py") are surface forms registered as aliases. The encoder
+//     looks tokens up with Registry.Resolve, which finds either one and never
+//     registers anything, so input text cannot grow the feature space.
+//   - Words that resolve to nothing are unknown — they contribute nothing.
 //     This is honest: the system doesn't know that word, so it has no features.
 //   - Multi-word concepts (bigrams, trigrams) are tried before single words.
 //   - Basic suffix stripping handles common inflections.
@@ -17,8 +21,11 @@
 package encoding
 
 import (
+	"fmt"
+	"slices"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/leraniode/x/centrix/core"
 	"github.com/leraniode/x/centrix/registry"
@@ -33,11 +40,6 @@ const (
 	// weightStemmed is the feature weight when a match required suffix stripping.
 	// Lower than direct — the stem is an approximation of the original token.
 	weightStemmed = 0.8
-
-	// weightUnigram is the weight penalty when a unigram matches but a longer
-	// ngram containing it also matched. Applied when the unigram is "consumed"
-	// by a bigram or trigram — we still include it but with reduced weight.
-	weightUnigram = 0.6
 )
 
 // ─── Stop words ───────────────────────────────────────────────────────────────
@@ -65,21 +67,23 @@ var stopWords = map[string]bool{
 
 // ─── Suffixes ─────────────────────────────────────────────────────────────────
 
-// suffixRules maps suffix → stripped form.
-// Applied in order — longest suffix first matters.
-// Only strip if the resulting stem is at least 3 characters.
+// suffixRules lists suffix → replacement, tried in order; the first rule whose
+// result resolves wins. Only strip if the resulting stem is at least 3 runes.
+// After each rule the stem is tried as-is, then with "e" restored.
 var suffixRules = []struct {
 	suffix  string
 	replace string
 }{
-	{"tion", ""},   // generation → generat (approximate, but hits "generate")
-	{"ing", ""},    // reversing → revers → reverse after e-restore
-	{"ness", ""},   // friendliness → friendli → friendly
-	{"ly", ""},     // quickly → quick
-	{"ed", ""},     // reversed → revers
-	{"er", ""},     // handler → handl
-	{"est", ""},    // fastest → fast
-	{"s", ""},      // strings → string (applied last, most aggressive)
+	{"ies", "y"}, // queries → query
+	{"tion", ""}, // generation → generat (approximate; "generate" via e-restore)
+	{"ing", ""},  // reversing → revers → reverse after e-restore
+	{"ness", ""}, // quickness → quick
+	{"ly", ""},   // quickly → quick
+	{"ed", ""},   // reversed → revers → reverse
+	{"er", ""},   // handler → handl → handle
+	{"est", ""},  // fastest → fast
+	{"es", ""},   // classes → class, files → fil → file
+	{"s", ""},    // strings → string (last, most aggressive)
 }
 
 // ─── Encoder ──────────────────────────────────────────────────────────────────
@@ -95,6 +99,39 @@ type Encoder struct {
 // The Registry must contain all concept entries for the system's feature space.
 func New(reg *registry.Registry) *Encoder {
 	return &Encoder{reg: reg}
+}
+
+// Alias registers surface forms — words or phrases as they appear in input
+// text — for a concept that is already in the Registry:
+//
+//	enc.Alias("lang.python", "python", "py")
+//
+// Each surface is normalised with the same tokeniser Encode uses (lower-case,
+// punctuation stripped, single spaces), so "Python 3!" is stored as "python 3"
+// and will match what Encode actually sees. A surface with no tokens, or a
+// single stop word (which Encode would skip), is rejected. Surfaces are applied
+// in order and stop at the first error; earlier ones stay registered.
+//
+// Errors from the Registry (registry.ErrUnknownConcept, registry.ErrAliasConflict)
+// are returned unchanged and can be tested with errors.Is.
+func (e *Encoder) Alias(concept string, surfaces ...string) error {
+	norm := make([]string, len(surfaces))
+	for i, s := range surfaces {
+		tokens := tokenise(s)
+		if len(tokens) == 0 {
+			return fmt.Errorf("encoding: surface %q has no tokens", s)
+		}
+		if len(tokens) == 1 && stopWords[tokens[0]] {
+			return fmt.Errorf("encoding: surface %q is a stop word and would never match", s)
+		}
+		norm[i] = strings.Join(tokens, " ")
+	}
+	for _, s := range norm {
+		if err := e.reg.Alias(s, concept); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Encode converts raw text into a SparseVector.
@@ -123,8 +160,7 @@ func (e *Encoder) Encode(text string) core.SparseVector {
 			continue
 		}
 		phrase := tokens[i] + " " + tokens[i+1] + " " + tokens[i+2]
-		if e.reg.Has(phrase) {
-			idx := e.reg.ID(phrase)
+		if idx, ok := e.reg.Resolve(phrase); ok {
 			accumulate(vec, idx, weightDirect)
 			consumed[i] = true
 			consumed[i+1] = true
@@ -138,8 +174,7 @@ func (e *Encoder) Encode(text string) core.SparseVector {
 			continue
 		}
 		phrase := tokens[i] + " " + tokens[i+1]
-		if e.reg.Has(phrase) {
-			idx := e.reg.ID(phrase)
+		if idx, ok := e.reg.Resolve(phrase); ok {
 			accumulate(vec, idx, weightDirect)
 			consumed[i] = true
 			consumed[i+1] = true
@@ -155,17 +190,15 @@ func (e *Encoder) Encode(text string) core.SparseVector {
 			continue
 		}
 
-		// Direct Registry lookup — Has before ID to avoid auto-registration.
-		if e.reg.Has(token) {
-			accumulate(vec, e.reg.ID(token), weightDirect)
+		// Direct lookup — a concept name or an alias. Resolve never registers.
+		if idx, ok := e.reg.Resolve(token); ok {
+			accumulate(vec, idx, weightDirect)
 			continue
 		}
 
 		// Suffix stripping fallback.
-		if stemmed, ok := e.tryStem(token); ok {
-			if e.reg.Has(stemmed) {
-				accumulate(vec, e.reg.ID(stemmed), weightStemmed)
-			}
+		if idx, ok := e.tryStem(token); ok {
+			accumulate(vec, idx, weightStemmed)
 		}
 		// No hit: dropped. Honest about unknown tokens.
 	}
@@ -175,14 +208,21 @@ func (e *Encoder) Encode(text string) core.SparseVector {
 
 // Decode converts a SparseVector back into a list of concept names.
 // Uses the Registry to map FeatureIndexes → human-readable names.
-// Features with no Registry entry are shown as "?<index>".
+// Names come back in ascending FeatureIndex order, so the result is the same on
+// every call. Features with no Registry entry appear as "?<index>".
 // Useful for debugging and trace readability.
 func (e *Encoder) Decode(vec core.SparseVector) []string {
-	names := make([]string, 0, len(vec))
+	idxs := make([]core.FeatureIndex, 0, len(vec))
 	for idx := range vec {
+		idxs = append(idxs, idx)
+	}
+	slices.Sort(idxs)
+
+	names := make([]string, 0, len(idxs))
+	for _, idx := range idxs {
 		name, ok := e.reg.Name(idx)
 		if !ok {
-			name = "?"
+			name = fmt.Sprintf("?%d", idx)
 		}
 		names = append(names, name)
 	}
@@ -220,31 +260,33 @@ func tokenise(text string) []string {
 	return out
 }
 
-// tryStem applies suffix stripping rules and returns the stemmed form.
-// Returns "", false if no rule applies or the stem is too short.
-func (e *Encoder) tryStem(token string) (string, bool) {
+// tryStem applies suffix stripping rules and returns the FeatureIndex of the
+// first candidate stem that resolves. Returns 0, false if no rule applies,
+// the stem is too short, or nothing resolves.
+func (e *Encoder) tryStem(token string) (core.FeatureIndex, bool) {
 	for _, rule := range suffixRules {
 		if !strings.HasSuffix(token, rule.suffix) {
 			continue
 		}
 		stem := token[:len(token)-len(rule.suffix)]
 
-		// Minimum stem length.
-		if len(stem) < 3 {
+		// Minimum stem length, in runes.
+		if utf8.RuneCountInString(stem) < 3 {
 			continue
 		}
+		candidate := stem + rule.replace
 
-		// Try stem as-is.
-		if e.reg.Has(stem) {
-			return stem, true
+		// Try the candidate as-is.
+		if idx, ok := e.reg.Resolve(candidate); ok {
+			return idx, true
 		}
 
-		// Try stem + "e" restoration (reversing → reverse).
-		if e.reg.Has(stem + "e") {
-			return stem + "e", true
+		// Try candidate + "e" restoration (reversing → reverse).
+		if idx, ok := e.reg.Resolve(candidate + "e"); ok {
+			return idx, true
 		}
 	}
-	return "", false
+	return 0, false
 }
 
 // accumulate adds weight to a feature in the vector.
