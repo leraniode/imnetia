@@ -8,7 +8,7 @@
 
 > Deterministic intelligence framework for Go.
 
-Built on [Centrix](https://pkg.go.devgithub.com/leraniode/x/centrix) — sparse signal mathematics.
+Built on [Centrix](https://pkg.go.dev/github.com/leraniode/x/centrix) — sparse signal mathematics.
 
 **Status: Experimental.** APIs and behaviours are subject to change until v1.0.
 
